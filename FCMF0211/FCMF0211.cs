@@ -1,0 +1,1242 @@
+﻿using System;
+using System.Data;
+using System.Drawing;
+using System.Windows.Forms;
+using System.Collections.Generic;
+
+using Syncfusion.Windows.Forms;
+using Syncfusion.Windows.Forms.Tools;
+using Syncfusion.Windows.Forms.Grid;
+using InfoSummit.Win.ControlAdv;
+using ISCommonUtil;
+
+using System.IO;
+using Syncfusion.GridExcelConverter;
+
+namespace FCMF0211
+{
+    public partial class FCMF0211 : Office2007Form
+    {
+        #region ----- Variables -----
+
+        ISFunction.ISConvert iString = new ISFunction.ISConvert();
+        ISFunction.ISDateTime iDate = new ISFunction.ISDateTime();
+
+        object mSession_ID;
+        object mAccount_Book_ID;
+        object mAccount_Set_ID;
+        object mFiscal_Calendar_ID;
+        object mDept_Level;
+        object mAccount_Book_Name;
+        string mCurrency_Code;
+        object mBudget_Control_YN;
+
+        string mPrintOptionFlag; 
+
+        #endregion;
+
+        #region ----- Constructor -----
+
+        public FCMF0211()
+        {
+            InitializeComponent();
+        }
+
+        public FCMF0211(Form pMainForm, ISAppInterface pAppInterface)
+        {
+            InitializeComponent();
+            this.MdiParent = pMainForm;
+            isAppInterfaceAdv1.AppInterface = pAppInterface;
+             
+            mPrintOptionFlag = "Y";
+            //TEST//
+            SLIP_HEADER_ID.EditValue = 500020411;
+            GL_DATE.EditValue = "2022-05-02";
+            GL_NUM.EditValue = "GL2205020003"; 
+            SLIP_DATE.EditValue = "2022-05-02";
+            SLIP_NUM.EditValue = "GL2205020003";
+        }
+
+        public FCMF0211(Form pMainForm, ISAppInterface pAppInterface, 
+                        object pSlip_Header_ID, object pGL_Date, object pGL_Num, 
+                        string pPrintOptionFlag)
+        {
+            InitializeComponent();
+            this.MdiParent = pMainForm;
+            isAppInterfaceAdv1.AppInterface = pAppInterface;
+
+            SLIP_HEADER_ID.EditValue = pSlip_Header_ID;
+            GL_DATE.EditValue = pGL_Date;
+            GL_NUM.EditValue = pGL_Num;
+
+            mPrintOptionFlag = pPrintOptionFlag;
+        }
+
+        public FCMF0211(Form pMainForm, ISAppInterface pAppInterface, object pSlip_Header_ID, 
+                        object pGL_Date, object pGL_Num,
+                        object pSLIP_Date, object pSLIP_Num,
+                        string pPrintOptionFlag)
+        {
+            InitializeComponent();
+            this.MdiParent = pMainForm;
+            isAppInterfaceAdv1.AppInterface = pAppInterface;
+
+            SLIP_HEADER_ID.EditValue = pSlip_Header_ID;
+            GL_DATE.EditValue = pGL_Date;
+            GL_NUM.EditValue = pGL_Num;
+
+            SLIP_DATE.EditValue = pSLIP_Date;
+            SLIP_NUM.EditValue = pSLIP_Num;
+
+            mPrintOptionFlag = pPrintOptionFlag;
+        }
+
+        #endregion;
+
+        #region ----- Private Methods -----
+
+        private void GetAccountBook()
+        {
+            idcACCOUNT_BOOK.ExecuteNonQuery();
+            mSession_ID = idcACCOUNT_BOOK.GetCommandParamValue("O_SESSION_ID");
+            mAccount_Book_ID = idcACCOUNT_BOOK.GetCommandParamValue("O_ACCOUNT_BOOK_ID");
+            mAccount_Book_Name = idcACCOUNT_BOOK.GetCommandParamValue("O_ACCOUNT_BOOK_NAME");
+            mAccount_Set_ID = idcACCOUNT_BOOK.GetCommandParamValue("O_ACCOUNT_SET_ID");
+            mFiscal_Calendar_ID = idcACCOUNT_BOOK.GetCommandParamValue("O_FISCAL_CALENDAR_ID");
+            mDept_Level = idcACCOUNT_BOOK.GetCommandParamValue("O_DEPT_LEVEL");
+            mCurrency_Code = iString.ISNull(idcACCOUNT_BOOK.GetCommandParamValue("O_CURRENCY_CODE"));
+            mBudget_Control_YN = idcACCOUNT_BOOK.GetCommandParamValue("O_BUDGET_CONTROL_YN");
+        }
+
+        private void Search_DB()
+        {
+             
+        }
+                    
+        #endregion; 
+
+        #region ----- XL Export Methods ----
+
+        private void ExportXL(ISDataAdapter pAdapter)
+        {
+            int vCountRow = pAdapter.CurrentRows.Count;
+            if (vCountRow < 1)
+            {
+                return;
+            }
+
+            string vsMessage = string.Empty;
+            string vsSheetName = "Slip_Line";
+
+            saveFileDialog1.Title = "Excel_Save";
+            saveFileDialog1.FileName = "XL_00";
+            saveFileDialog1.DefaultExt = "xlsx";
+            System.IO.DirectoryInfo vSaveFolder = new System.IO.DirectoryInfo(System.Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
+            saveFileDialog1.InitialDirectory = vSaveFolder.FullName;
+            saveFileDialog1.Filter = "Excel Files (*.xlsx)|*.xlsx";
+            if (saveFileDialog1.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                string vsSaveExcelFileName = saveFileDialog1.FileName;
+                XL.XLPrint xlExport = new XL.XLPrint();
+                bool vXLSaveOK = xlExport.XLExport(pAdapter.OraSelectData, vsSaveExcelFileName, vsSheetName);
+                if (vXLSaveOK == true)
+                {
+                    vsMessage = string.Format("Save OK [{0}]", vsSaveExcelFileName);
+                    MessageBoxAdv.Show(vsMessage);
+                }
+                else
+                {
+                    vsMessage = string.Format("Save Err [{0}]", vsSaveExcelFileName);
+                    MessageBoxAdv.Show(vsMessage);
+                }
+                xlExport.XLClose();
+            }
+        }
+
+        #endregion;
+
+        #region ----- Territory Get Methods ----
+
+        private int GetTerritory(ISUtil.Enum.TerritoryLanguage pTerritoryEnum)
+        {
+            int vTerritory = 0;
+
+            switch (pTerritoryEnum)
+            {
+                case ISUtil.Enum.TerritoryLanguage.Default:
+                    vTerritory = 1;
+                    break;
+                case ISUtil.Enum.TerritoryLanguage.TL1_KR:
+                    vTerritory = 2;
+                    break;
+                case ISUtil.Enum.TerritoryLanguage.TL2_CN:
+                    vTerritory = 3;
+                    break;
+                case ISUtil.Enum.TerritoryLanguage.TL3_VN:
+                    vTerritory = 4;
+                    break;
+                case ISUtil.Enum.TerritoryLanguage.TL4_JP:
+                    vTerritory = 5;
+                    break;
+                case ISUtil.Enum.TerritoryLanguage.TL5_XAA:
+                    vTerritory = 6;
+                    break;
+            }
+
+            return vTerritory;
+        }
+
+        private object Get_Edit_Prompt(InfoSummit.Win.ControlAdv.ISEditAdv pEdit)
+        {
+            int mIDX = 0;
+            object mPrompt = null;
+            switch (isAppInterfaceAdv1.AppInterface.OraConnectionInfo.TerritoryLanguage)
+            {
+                case ISUtil.Enum.TerritoryLanguage.Default:
+                    mPrompt = pEdit.PromptTextElement[mIDX].Default;
+                    break;
+                case ISUtil.Enum.TerritoryLanguage.TL1_KR:
+                    mPrompt = pEdit.PromptTextElement[mIDX].TL1_KR;
+                    break;
+                case ISUtil.Enum.TerritoryLanguage.TL2_CN:
+                    mPrompt = pEdit.PromptTextElement[mIDX].TL2_CN;
+                    break;
+                case ISUtil.Enum.TerritoryLanguage.TL3_VN:
+                    mPrompt = pEdit.PromptTextElement[mIDX].TL3_VN;
+                    break;
+                case ISUtil.Enum.TerritoryLanguage.TL4_JP:
+                    mPrompt = pEdit.PromptTextElement[mIDX].TL4_JP;
+                    break;
+                case ISUtil.Enum.TerritoryLanguage.TL5_XAA:
+                    mPrompt = pEdit.PromptTextElement[mIDX].TL5_XAA;
+                    break;
+            }
+            return mPrompt;
+        }
+
+        #endregion;
+
+        #region ----- XL Print 1 Methods ----
+
+        private void XLPrinting_Main(string pOutput_Type)
+        {         
+            string vSaveFileName = string.Empty;
+            if (pOutput_Type == "EXCEL")
+            {
+                SaveFileDialog vSaveFileDialog = new SaveFileDialog();
+                vSaveFileDialog.RestoreDirectory = true;
+                vSaveFileDialog.Filter = "xlsx file(*.xlsx)|*.xlsx";
+                vSaveFileDialog.DefaultExt = "xlsx";
+
+                if (vSaveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    vSaveFileName = vSaveFileDialog.FileName;
+                }
+                else
+                {
+                    return;
+                }
+            }
+            else if (pOutput_Type == "PDF")
+            {
+                SaveFileDialog vSaveFileDialog = new SaveFileDialog();
+                vSaveFileDialog.RestoreDirectory = true;
+                vSaveFileDialog.Filter = "pdf file(*.pdf)|*.pdf";
+                vSaveFileDialog.DefaultExt = "pdf";
+
+                if (vSaveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    vSaveFileName = vSaveFileDialog.FileName;
+                }
+                else
+                {
+                    return;
+                }
+            }
+
+            idaSLIP_HEADER.Fill();
+            if(idaSLIP_HEADER.CurrentRows.Count == 0)
+            {
+                MessageBoxAdv.Show(isMessageAdapter1.ReturnText("EAPP_10106"), "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                this.DialogResult = DialogResult.Cancel;
+                this.Close();
+                return;
+            }
+
+            IDC_GET_REPORT_SET.SetCommandParamValue("P_STD_DATE", GL_DATE.EditValue);
+            IDC_GET_REPORT_SET.SetCommandParamValue("P_ASSEMBLY_ID", "FCMF0211");
+            IDC_GET_REPORT_SET.ExecuteNonQuery();
+            string vREPORT_TYPE = iString.ISNull(IDC_GET_REPORT_SET.GetCommandParamValue("O_REPORT_TYPE"));
+            string vREPORT_FILE_NAME = iString.ISNull(IDC_GET_REPORT_SET.GetCommandParamValue("O_REPORT_FILE_NAME"));
+            string vPRINT_APPR_STEP = iString.ISNull(IDC_GET_REPORT_SET.GetCommandParamValue("O_PRINT_APPR_STEP"));
+
+            if (vREPORT_TYPE.ToUpper() == "BHC")
+            {
+                XLPrinting_BHC(vREPORT_FILE_NAME, pOutput_Type, vSaveFileName);
+            }
+            else if (vREPORT_TYPE.ToUpper() == "BSK")
+            {
+                XLPrinting_BSK(vREPORT_FILE_NAME, pOutput_Type, vSaveFileName);
+            }
+            else if (vREPORT_TYPE.ToUpper() == "SEK")
+            {
+                XLPrinting_SEK(vREPORT_FILE_NAME, pOutput_Type, vSaveFileName);
+            }
+            else if(vREPORT_TYPE.ToUpper() == "SIK")
+            {
+                XLPrinting_SIK(vREPORT_FILE_NAME, pOutput_Type, vSaveFileName, vPRINT_APPR_STEP);
+            }
+            else if (vREPORT_TYPE.ToUpper() == "DKT")
+            {
+                XLPrinting_DKT(vREPORT_FILE_NAME, pOutput_Type, vSaveFileName, vPRINT_APPR_STEP);
+            }
+            else 
+            {
+                XLPrinting(vREPORT_FILE_NAME, pOutput_Type, vSaveFileName);
+            }
+        }
+
+        private void XLPrinting(string pReport_File_Name, string pOutput_Type, string pSaveFileName)
+        {
+            System.Windows.Forms.Application.UseWaitCursor = true;
+            this.Cursor = System.Windows.Forms.Cursors.WaitCursor;
+            System.Windows.Forms.Application.DoEvents();
+
+            string vMessageText = string.Empty;
+            int vPageTotal = 0;
+            int vPageNumber = 0; 
+            
+            vMessageText = string.Format("Printing Starting", vPageTotal);
+            isAppInterfaceAdv1.OnAppMessage(vMessageText);
+            System.Windows.Forms.Application.DoEvents();
+
+            //-------------------------------------------------------------------------------------
+            XLPrinting xlPrinting = new XLPrinting(isAppInterfaceAdv1.AppInterface);
+
+            try
+            {
+                //-------------------------------------------------------------------------------------
+                if (pReport_File_Name == string.Empty)
+                {
+                    xlPrinting.OpenFileNameExcel = "FCMF0211_001.xlsx";
+                }
+                else
+                {
+                    xlPrinting.OpenFileNameExcel = pReport_File_Name;
+                }
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                bool isOpen = xlPrinting.XLFileOpen();
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                if (isOpen == true)
+                {
+                    object vObject;
+                    int vCountRow = 0;
+                    
+                    //인쇄일자 
+                    IDC_GET_DATE.ExecuteNonQuery();
+                    object vLOCAL_DATE = IDC_GET_DATE.GetCommandParamValue("X_LOCAL_DATE");
+                    
+                     
+                    xlPrinting.HeaderWrite(idaSLIP_HEADER, vLOCAL_DATE);
+                    vObject = SLIP_HEADER_ID.EditValue;
+                     
+                    idaPRINT_SLIP_LINE.SetSelectParamValue("W_SLIP_HEADER_ID", vObject);
+                    idaPRINT_SLIP_LINE.Fill();
+
+                    vCountRow = idaPRINT_SLIP_LINE.CurrentRows.Count;
+                    if (vCountRow > 0)
+                    {
+                        vPageNumber = xlPrinting.LineWrite(idaPRINT_SLIP_LINE);
+                    }
+
+                    if (pOutput_Type == "PREVIEW")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.PreView(1, vPageNumber);
+
+                    } 
+                    else if (pOutput_Type == "PDF")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.PDF(pSaveFileName);
+
+                    }
+                    else if (pOutput_Type == "EXCEL")
+                    {
+                        ////[SAVE]
+                        xlPrinting.Save(pSaveFileName); //저장 파일명
+                    }
+                    else  
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.Printing(1, vPageNumber);
+
+                    }
+                    vPageTotal = vPageTotal + vPageNumber;
+                }
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                xlPrinting.Dispose();
+                //-------------------------------------------------------------------------------------
+            }
+            catch (System.Exception ex)
+            {
+                string vMessage = ex.Message;
+                xlPrinting.Dispose();
+
+                System.Windows.Forms.Application.UseWaitCursor = false;
+                this.Cursor = System.Windows.Forms.Cursors.Default;
+                System.Windows.Forms.Application.DoEvents();
+
+                return;
+            } 
+
+            //-------------------------------------------------------------------------
+            vMessageText = string.Format("Print End ^.^ [Tatal Page : {0}]", vPageTotal);
+            isAppInterfaceAdv1.AppInterface.OnAppMessageEvent(vMessageText);
+            System.Windows.Forms.Application.DoEvents();
+
+            System.Windows.Forms.Application.UseWaitCursor = false;
+            this.Cursor = System.Windows.Forms.Cursors.Default;
+            System.Windows.Forms.Application.DoEvents();
+        }
+
+        private void XLPrinting_BSK(string pReport_File_Name, string pOutput_Type, string pSaveFileName)
+        {
+            System.Windows.Forms.Application.UseWaitCursor = true;
+            this.Cursor = System.Windows.Forms.Cursors.WaitCursor;
+            System.Windows.Forms.Application.DoEvents();
+
+            string vMessageText = string.Empty;
+            int vPageTotal = 0;
+            int vPageNumber = 0;
+         
+            vMessageText = string.Format("Printing Starting", vPageTotal);
+            isAppInterfaceAdv1.OnAppMessage(vMessageText);
+            System.Windows.Forms.Application.DoEvents();
+
+            //-------------------------------------------------------------------------------------
+            XLPrinting xlPrinting = new XLPrinting(isAppInterfaceAdv1.AppInterface);
+
+            try
+            {
+                //-------------------------------------------------------------------------------------
+                if (pReport_File_Name == string.Empty)
+                {
+                    xlPrinting.OpenFileNameExcel = "FCMF0211_011.xlsx";
+                }
+                else
+                {
+                    xlPrinting.OpenFileNameExcel = pReport_File_Name;
+                } 
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                bool isOpen = xlPrinting.XLFileOpen();
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                if (isOpen == true)
+                { 
+                    int vCountRow = 0;
+                     
+                    //인쇄일자 
+                    IDC_GET_DATE.ExecuteNonQuery();
+                    object vLOCAL_DATE = IDC_GET_DATE.GetCommandParamValue("X_LOCAL_DATE");
+
+                    //회계법인명.
+                    IDC_GET_COMPANY_NAME_P.ExecuteNonQuery();
+                    object vSOB_DESC = IDC_GET_COMPANY_NAME_P.GetCommandParamValue("O_SOB_DESC");
+
+                    xlPrinting.HeaderWrite_BSK(idaSLIP_HEADER, vSOB_DESC, vLOCAL_DATE); 
+
+                    idaPRINT_SLIP_LINE.SetSelectParamValue("W_SLIP_HEADER_ID", SLIP_HEADER_ID.EditValue);
+                    idaPRINT_SLIP_LINE.Fill();
+
+                    vCountRow = idaPRINT_SLIP_LINE.CurrentRows.Count;
+                    if (vCountRow > 0)
+                    {
+                        vPageNumber = xlPrinting.LineWrite_BSK(idaPRINT_SLIP_LINE);
+                    }
+
+                    if (pOutput_Type == "PREVIEW")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.PreView(1, vPageNumber);
+
+                    }
+                    else if (pOutput_Type == "PRINTER")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.Printing(1, vPageNumber);
+
+                    }
+                    else if (pOutput_Type == "PDF")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.PDF(pSaveFileName);
+
+                    }
+                    else if (pOutput_Type == "EXCEL")
+                    {
+                        ////[SAVE]
+                        xlPrinting.Save(pSaveFileName); //저장 파일명
+                    }
+
+                    vPageTotal = vPageTotal + vPageNumber;
+                }
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                xlPrinting.Dispose();
+                //-------------------------------------------------------------------------------------
+            }
+            catch (System.Exception ex)
+            {
+                string vMessage = ex.Message;
+                xlPrinting.Dispose();
+
+                System.Windows.Forms.Application.UseWaitCursor = false;
+                this.Cursor = System.Windows.Forms.Cursors.Default;
+                System.Windows.Forms.Application.DoEvents();
+                return;
+            } 
+
+            //-------------------------------------------------------------------------
+            vMessageText = string.Format("Print End ^.^ [Tatal Page : {0}]", vPageTotal);
+            isAppInterfaceAdv1.AppInterface.OnAppMessageEvent(vMessageText);
+            System.Windows.Forms.Application.DoEvents();
+
+            System.Windows.Forms.Application.UseWaitCursor = false;
+            this.Cursor = System.Windows.Forms.Cursors.Default;
+            System.Windows.Forms.Application.DoEvents();
+        }
+
+        private void XLPrinting_SEK(string pReport_File_Name, string pOutput_Type, string pSaveFileName)
+        {
+            System.Windows.Forms.Application.UseWaitCursor = true;
+            this.Cursor = System.Windows.Forms.Cursors.WaitCursor;
+            System.Windows.Forms.Application.DoEvents();
+
+            string vMessageText = string.Empty;
+            int vPageTotal = 0;
+            int vPageNumber = 0;
+
+            vMessageText = string.Format("Printing Starting", vPageTotal);
+            isAppInterfaceAdv1.OnAppMessage(vMessageText);
+            System.Windows.Forms.Application.DoEvents();
+
+            //-------------------------------------------------------------------------------------
+            XLPrinting xlPrinting = new XLPrinting(isAppInterfaceAdv1.AppInterface);
+
+            try
+            {
+                //-------------------------------------------------------------------------------------
+                if (pReport_File_Name == string.Empty)
+                {
+                    xlPrinting.OpenFileNameExcel = "FCMF0211_021.xlsx";
+                }
+                else
+                {
+                    xlPrinting.OpenFileNameExcel = pReport_File_Name;
+                } 
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                bool isOpen = xlPrinting.XLFileOpen();
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                if (isOpen == true)
+                {
+                    object vObject;
+                    int vCountRow = 0;
+
+                    //인쇄일자 
+                    IDC_GET_DATE.ExecuteNonQuery();
+                    object vLOCAL_DATE = IDC_GET_DATE.GetCommandParamValue("X_LOCAL_DATE");
+
+                    //회계법인명.
+                    IDC_GET_COMPANY_NAME_P.ExecuteNonQuery();
+                    object vSOB_DESC = IDC_GET_COMPANY_NAME_P.GetCommandParamValue("O_SOB_DESC");
+
+                    xlPrinting.HeaderWrite_SEK(idaSLIP_HEADER, vSOB_DESC, vLOCAL_DATE);
+                    vObject = SLIP_HEADER_ID.EditValue;
+
+                    idaPRINT_SLIP_LINE.SetSelectParamValue("W_SLIP_HEADER_ID", vObject);
+                    idaPRINT_SLIP_LINE.Fill();
+
+                    vCountRow = idaPRINT_SLIP_LINE.CurrentRows.Count;
+                    if (vCountRow > 0)
+                    {
+                        vPageNumber = xlPrinting.LineWrite_SEK(idaPRINT_SLIP_LINE);
+                    }
+
+                    if (pOutput_Type == "PREVIEW")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.PreView(1, vPageNumber);
+
+                    }
+                    else if (pOutput_Type == "PRINTER")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.Printing(1, vPageNumber);
+
+                    }
+                    else if (pOutput_Type == "PDF")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.PDF(pSaveFileName);
+
+                    }
+                    else if (pOutput_Type == "EXCEL")
+                    {
+                        ////[SAVE]
+                        xlPrinting.Save(pSaveFileName); //저장 파일명
+                    }
+
+                    vPageTotal = vPageTotal + vPageNumber;
+                }
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                xlPrinting.Dispose();
+                //-------------------------------------------------------------------------------------
+            }
+            catch (System.Exception ex)
+            {
+                string vMessage = ex.Message;
+                xlPrinting.Dispose();
+
+                System.Windows.Forms.Application.UseWaitCursor = false;
+                this.Cursor = System.Windows.Forms.Cursors.Default;
+                System.Windows.Forms.Application.DoEvents();
+
+                return;
+            }
+
+            //-------------------------------------------------------------------------
+            vMessageText = string.Format("Print End ^.^ [Tatal Page : {0}]", vPageTotal);
+            isAppInterfaceAdv1.AppInterface.OnAppMessageEvent(vMessageText);
+            System.Windows.Forms.Application.DoEvents();
+
+            System.Windows.Forms.Application.UseWaitCursor = false;
+            this.Cursor = System.Windows.Forms.Cursors.Default;
+            System.Windows.Forms.Application.DoEvents();
+        }
+
+        private void XLPrinting_BHC(string pReport_File_Name, string pOutput_Type, string pSaveFileName)
+        {
+            System.Windows.Forms.Application.UseWaitCursor = true;
+            this.Cursor = System.Windows.Forms.Cursors.WaitCursor;
+            System.Windows.Forms.Application.DoEvents();
+
+            string vMessageText = string.Empty;
+            int vPageTotal = 0;
+            int vPageNumber = 0;
+
+            vMessageText = string.Format("Printing Starting", vPageTotal);
+            isAppInterfaceAdv1.OnAppMessage(vMessageText);
+            System.Windows.Forms.Application.DoEvents();
+
+            //-------------------------------------------------------------------------------------
+            XLPrinting xlPrinting = new XLPrinting(isAppInterfaceAdv1.AppInterface);
+
+            try
+            {
+                //-------------------------------------------------------------------------------------
+                xlPrinting.OpenFileNameExcel = "FCMF0211_031.xlsx";
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                bool isOpen = xlPrinting.XLFileOpen();
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                if (isOpen == true)
+                {
+                    int vCountRow = 0;
+
+                    //인쇄일자 
+                    IDC_GET_DATE.ExecuteNonQuery();
+                    object vLOCAL_DATE = IDC_GET_DATE.GetCommandParamValue("X_LOCAL_DATE");
+
+                    //회계법인명.
+                    IDC_GET_COMPANY_NAME_P.ExecuteNonQuery();
+                    object vSOB_DESC = IDC_GET_COMPANY_NAME_P.GetCommandParamValue("O_SOB_DESC");
+
+                    xlPrinting.HeaderWrite_BHC(idaSLIP_HEADER, vSOB_DESC, vLOCAL_DATE);
+
+                    idaPRINT_SLIP_LINE.SetSelectParamValue("W_SLIP_HEADER_ID", SLIP_HEADER_ID.EditValue);
+                    idaPRINT_SLIP_LINE.Fill();
+
+                    vCountRow = idaPRINT_SLIP_LINE.CurrentRows.Count;
+                    if (vCountRow > 0)
+                    {
+                        vPageNumber = xlPrinting.LineWrite_BHC(idaPRINT_SLIP_LINE);
+                    }
+
+                    if (pOutput_Type == "PREVIEW")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.PreView(1, vPageNumber);
+
+                    }
+                    else if (pOutput_Type == "PRINTER")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.Printing(1, vPageNumber);
+
+                    }
+                    else if (pOutput_Type == "PDF")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.PDF(pSaveFileName);
+
+                    }
+                    else if (pOutput_Type == "EXCEL")
+                    {
+                        ////[SAVE]
+                        xlPrinting.Save(pSaveFileName); //저장 파일명
+                    }
+
+                    vPageTotal = vPageTotal + vPageNumber;
+                }
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                xlPrinting.Dispose();
+                //-------------------------------------------------------------------------------------
+            }
+            catch (System.Exception ex)
+            {
+                string vMessage = ex.Message;
+                xlPrinting.Dispose();
+
+                System.Windows.Forms.Application.UseWaitCursor = false;
+                this.Cursor = Cursors.Default;
+                System.Windows.Forms.Application.DoEvents();
+                return;
+            }
+
+            //-------------------------------------------------------------------------
+            vMessageText = string.Format("Print End ^.^ [Tatal Page : {0}]", vPageTotal);
+            isAppInterfaceAdv1.AppInterface.OnAppMessageEvent(vMessageText);
+            System.Windows.Forms.Application.DoEvents();
+
+            System.Windows.Forms.Application.UseWaitCursor = false;
+            this.Cursor = System.Windows.Forms.Cursors.Default;
+            System.Windows.Forms.Application.DoEvents();
+        }
+
+        private void XLPrinting_SIK(string pReport_File_Name, string pOutput_Type, string pSaveFileName)
+        {
+            System.Windows.Forms.Application.UseWaitCursor = true;
+            this.Cursor = System.Windows.Forms.Cursors.WaitCursor;
+            System.Windows.Forms.Application.DoEvents();
+
+            string vMessageText = string.Empty;
+            int vPageTotal = 0;
+            int vPageNumber = 0;
+
+            vMessageText = string.Format("Printing Starting", vPageTotal);
+            isAppInterfaceAdv1.OnAppMessage(vMessageText);
+            System.Windows.Forms.Application.DoEvents();
+
+            //-------------------------------------------------------------------------------------
+            XLPrinting xlPrinting = new XLPrinting(isAppInterfaceAdv1.AppInterface);
+
+            try
+            {
+                //-------------------------------------------------------------------------------------
+                if (pReport_File_Name == string.Empty)
+                {
+                    xlPrinting.OpenFileNameExcel = "FCMF0211_051.xlsx"; 
+                }
+                else
+                {
+                    xlPrinting.OpenFileNameExcel = pReport_File_Name;
+                } 
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                bool isOpen = xlPrinting.XLFileOpen();
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                if (isOpen == true)
+                {
+                    int vCountRow = 0;
+                     
+                    //회계법인명.
+                    IDC_GET_COMPANY_NAME_P.ExecuteNonQuery();
+                    object vSOB_DESC = IDC_GET_COMPANY_NAME_P.GetCommandParamValue("O_SOB_DESC");
+
+                    //인쇄 결재라인 설정//
+                    //1.현업//
+                    IDC_GET_GL_NUM_APPROVAL_LINE_TOP.SetCommandParamValue("P_DEPT_TYPE", "USER");
+                    IDC_GET_GL_NUM_APPROVAL_LINE_TOP.ExecuteNonQuery();
+
+                    //2.회계팀//
+                    IDC_GET_GL_NUM_APPROVAL_LINE_BOTTOM.SetCommandParamValue("P_DEPT_TYPE", "ACCOUNT");
+                    IDC_GET_GL_NUM_APPROVAL_LINE_BOTTOM.ExecuteNonQuery();
+
+                    xlPrinting.HeaderWrite_SIK(idaSLIP_HEADER, vSOB_DESC, IDC_GET_GL_NUM_APPROVAL_LINE_BOTTOM, IDC_GET_GL_NUM_APPROVAL_LINE_TOP);
+
+                    idaPRINT_SLIP_LINE.SetSelectParamValue("W_SLIP_HEADER_ID", SLIP_HEADER_ID.EditValue);
+                    idaPRINT_SLIP_LINE.Fill();
+
+                    vCountRow = idaPRINT_SLIP_LINE.CurrentRows.Count;
+                    if (vCountRow > 0)
+                    {
+                        vPageNumber = xlPrinting.LineWrite_SIK(idaPRINT_SLIP_LINE);
+                    }
+
+                    if (pOutput_Type == "PREVIEW")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.PreView(1, vPageNumber);
+
+                    }
+                    else if (pOutput_Type == "PRINTER")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.Printing(1, vPageNumber);
+
+                    }
+                    else if (pOutput_Type == "PDF")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.PDF(pSaveFileName);
+
+                    }
+                    else if (pOutput_Type == "EXCEL")
+                    {
+                        ////[SAVE]
+                        xlPrinting.Save(pSaveFileName); //저장 파일명
+                    }
+
+                    vPageTotal = vPageTotal + vPageNumber;
+                }
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                xlPrinting.Dispose();
+                //-------------------------------------------------------------------------------------
+            }
+            catch (System.Exception ex)
+            {
+                string vMessage = ex.Message;
+                xlPrinting.Dispose();
+
+                System.Windows.Forms.Application.UseWaitCursor = false;
+                this.Cursor = System.Windows.Forms.Cursors.Default;
+                System.Windows.Forms.Application.DoEvents();
+                return;
+            }
+
+            //-------------------------------------------------------------------------
+            vMessageText = string.Format("Print End ^.^ [Tatal Page : {0}]", vPageTotal);
+            isAppInterfaceAdv1.AppInterface.OnAppMessageEvent(vMessageText);
+            System.Windows.Forms.Application.DoEvents();
+
+            System.Windows.Forms.Application.UseWaitCursor = false;
+            this.Cursor = System.Windows.Forms.Cursors.Default;
+            System.Windows.Forms.Application.DoEvents();
+        }
+
+        private void XLPrinting_SIK(string pReport_File_Name, string pOutput_Type, string pSaveFileName, string pPrint_Appr_Step)
+        {
+            System.Windows.Forms.Application.UseWaitCursor = true;
+            this.Cursor = System.Windows.Forms.Cursors.WaitCursor;
+            System.Windows.Forms.Application.DoEvents();
+
+            string vMessageText = string.Empty;
+            int vPageTotal = 0;
+            int vPageNumber = 0;
+
+            vMessageText = string.Format("Printing Starting", vPageTotal);
+            isAppInterfaceAdv1.OnAppMessage(vMessageText);
+            System.Windows.Forms.Application.DoEvents();
+
+            //-------------------------------------------------------------------------------------
+            XLPrinting xlPrinting = new XLPrinting(isAppInterfaceAdv1.AppInterface);
+
+            try
+            {
+                //-------------------------------------------------------------------------------------
+                if (pReport_File_Name == string.Empty)
+                {
+                    xlPrinting.OpenFileNameExcel = "FCMF0211_051.xlsx";
+                }
+                else
+                {
+                    xlPrinting.OpenFileNameExcel = pReport_File_Name;
+                }
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                bool isOpen = xlPrinting.XLFileOpen();
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                if (isOpen == true)
+                {
+                    int vCountRow = 0;
+
+                    //회계법인명.
+                    IDC_GET_COMPANY_NAME_P.ExecuteNonQuery();
+                    object vSOB_DESC = IDC_GET_COMPANY_NAME_P.GetCommandParamValue("O_SOB_DESC");
+
+                    //인쇄 결재라인 설정//
+                    //1.현업//
+                    IDC_GET_GL_NUM_APPROVAL_LINE_TOP.SetCommandParamValue("P_DEPT_TYPE", "USER");
+                    IDC_GET_GL_NUM_APPROVAL_LINE_TOP.ExecuteNonQuery();
+                     
+                    //2.회계팀//
+                    IDC_GET_GL_NUM_APPROVAL_LINE_BOTTOM.SetCommandParamValue("P_DEPT_TYPE", "ACCOUNT");
+                    IDC_GET_GL_NUM_APPROVAL_LINE_BOTTOM.ExecuteNonQuery();
+                     
+                    //승인단계 조회
+                    if (pPrint_Appr_Step.Equals("Y"))
+                    {
+                        IDC_GET_PRINT_APPROVAL_SLIP_TOP.SetCommandParamValue("P_SLIP_TYPE", "TOP");
+                        IDC_GET_PRINT_APPROVAL_SLIP_TOP.ExecuteNonQuery();
+
+                        IDC_GET_PRINT_APPROVAL_SLIP_BOTTOM.SetCommandParamValue("P_SLIP_TYPE", "BOTTOM");
+                        IDC_GET_PRINT_APPROVAL_SLIP_BOTTOM.ExecuteNonQuery();
+                        xlPrinting.HeaderWrite_SIK(idaSLIP_HEADER, vSOB_DESC, IDC_GET_PRINT_APPROVAL_SLIP_TOP, IDC_GET_PRINT_APPROVAL_SLIP_BOTTOM, IDC_GET_GL_NUM_APPROVAL_LINE_BOTTOM, IDC_GET_GL_NUM_APPROVAL_LINE_TOP);
+                    }
+                    else
+                        xlPrinting.HeaderWrite_SIK(idaSLIP_HEADER, vSOB_DESC, IDC_GET_GL_NUM_APPROVAL_LINE_BOTTOM, IDC_GET_GL_NUM_APPROVAL_LINE_TOP);
+                     
+
+                    idaPRINT_SLIP_LINE.SetSelectParamValue("W_SLIP_HEADER_ID", SLIP_HEADER_ID.EditValue);
+                    idaPRINT_SLIP_LINE.Fill();
+
+                    vCountRow = idaPRINT_SLIP_LINE.CurrentRows.Count;
+                    if (vCountRow > 0)
+                    {
+                        vPageNumber = xlPrinting.LineWrite_SIK(idaPRINT_SLIP_LINE);
+                    }
+
+                    if (pOutput_Type == "PREVIEW")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.PreView(1, vPageNumber);
+
+                    }
+                    else if (pOutput_Type == "PRINTER")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.Printing(1, vPageNumber);
+
+                    }
+                    else if (pOutput_Type == "PDF")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.PDF(pSaveFileName);
+
+                    }
+                    else if (pOutput_Type == "EXCEL")
+                    {
+                        ////[SAVE]
+                        xlPrinting.Save(pSaveFileName); //저장 파일명
+                    }
+
+                    vPageTotal = vPageTotal + vPageNumber;
+                }
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                xlPrinting.Dispose();
+                //-------------------------------------------------------------------------------------
+            }
+            catch (System.Exception ex)
+            {
+                string vMessage = ex.Message;
+                xlPrinting.Dispose();
+
+                System.Windows.Forms.Application.UseWaitCursor = false;
+                this.Cursor = System.Windows.Forms.Cursors.Default;
+                System.Windows.Forms.Application.DoEvents();
+                return;
+            }
+
+            //-------------------------------------------------------------------------
+            vMessageText = string.Format("Print End ^.^ [Tatal Page : {0}]", vPageTotal);
+            isAppInterfaceAdv1.AppInterface.OnAppMessageEvent(vMessageText);
+            System.Windows.Forms.Application.DoEvents();
+
+            System.Windows.Forms.Application.UseWaitCursor = false;
+            this.Cursor = System.Windows.Forms.Cursors.Default;
+            System.Windows.Forms.Application.DoEvents();
+        }
+
+
+        private void XLPrinting_DKT(string pReport_File_Name, string pOutput_Type, string pSaveFileName, string pPrint_Appr_Step)
+        {
+            System.Windows.Forms.Application.UseWaitCursor = true;
+            this.Cursor = System.Windows.Forms.Cursors.WaitCursor;
+            System.Windows.Forms.Application.DoEvents();
+
+            string vMessageText = string.Empty;
+            int vPageTotal = 0;
+            int vPageNumber = 0;
+
+            vMessageText = string.Format("Printing Starting", vPageTotal);
+            isAppInterfaceAdv1.OnAppMessage(vMessageText);
+            System.Windows.Forms.Application.DoEvents();
+
+            //-------------------------------------------------------------------------------------
+            XLPrinting xlPrinting = new XLPrinting(isAppInterfaceAdv1.AppInterface);
+
+            try
+            {
+                //-------------------------------------------------------------------------------------
+                if (pReport_File_Name == string.Empty)
+                {
+                    xlPrinting.OpenFileNameExcel = "FCMF0211_052.xlsx";
+                }
+                else
+                {
+                    xlPrinting.OpenFileNameExcel = pReport_File_Name;
+                }
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                bool isOpen = xlPrinting.XLFileOpen();
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                if (isOpen == true)
+                {
+                    int vCountRow = 0;
+                    //회계법인명.
+                    IDC_GET_COMPANY_NAME_P.ExecuteNonQuery();
+                    object vSOB_DESC = IDC_GET_COMPANY_NAME_P.GetCommandParamValue("O_SOB_DESC");
+
+                    //인쇄 결재라인 설정//
+                    //1.현업//
+                    IDC_GET_GL_NUM_APPROVAL_LINE_TOP.SetCommandParamValue("P_DEPT_TYPE", "TOP");
+                    IDC_GET_GL_NUM_APPROVAL_LINE_TOP.ExecuteNonQuery();
+
+                    //2.회계팀//
+                    IDC_GET_GL_NUM_APPROVAL_LINE_BOTTOM.SetCommandParamValue("P_DEPT_TYPE", "BOTTOM");
+                    IDC_GET_GL_NUM_APPROVAL_LINE_BOTTOM.ExecuteNonQuery();
+
+                    //승인단계 조회
+                    if (pPrint_Appr_Step.Equals("Y"))
+                    {
+                        IDC_GET_PRINT_APPROVAL_SLIP_TOP.SetCommandParamValue("P_SLIP_TYPE", "TOP");
+                        IDC_GET_PRINT_APPROVAL_SLIP_TOP.SetCommandParamValue("P_SLIP_DATE", SLIP_DATE.EditValue);
+                        IDC_GET_PRINT_APPROVAL_SLIP_TOP.SetCommandParamValue("P_SLIP_NUM", SLIP_NUM.EditValue);
+                        IDC_GET_PRINT_APPROVAL_SLIP_TOP.ExecuteNonQuery(); 
+
+                        IDC_GET_PRINT_APPROVAL_SLIP_BOTTOM.SetCommandParamValue("P_SLIP_TYPE", "BOTTOM");
+                        IDC_GET_PRINT_APPROVAL_SLIP_BOTTOM.SetCommandParamValue("P_SLIP_DATE", SLIP_DATE.EditValue);
+                        IDC_GET_PRINT_APPROVAL_SLIP_BOTTOM.SetCommandParamValue("P_SLIP_NUM", SLIP_NUM.EditValue);
+                        IDC_GET_PRINT_APPROVAL_SLIP_BOTTOM.ExecuteNonQuery();
+                        xlPrinting.HeaderWrite_DKT(idaSLIP_HEADER, vSOB_DESC
+                                                , IDC_GET_PRINT_APPROVAL_SLIP_TOP, IDC_GET_PRINT_APPROVAL_SLIP_BOTTOM
+                                                , IDC_GET_GL_NUM_APPROVAL_LINE_TOP, IDC_GET_GL_NUM_APPROVAL_LINE_BOTTOM);
+                    }
+                    else
+                        xlPrinting.HeaderWrite_DKT(idaSLIP_HEADER, vSOB_DESC
+                                                , IDC_GET_GL_NUM_APPROVAL_LINE_TOP, IDC_GET_GL_NUM_APPROVAL_LINE_BOTTOM);
+
+                    idaPRINT_SLIP_LINE.SetSelectParamValue("W_SLIP_HEADER_ID", SLIP_HEADER_ID.EditValue);
+                    idaPRINT_SLIP_LINE.Fill();
+
+                    vCountRow = idaPRINT_SLIP_LINE.CurrentRows.Count;
+                    if (vCountRow > 0)
+                    {
+                        vPageNumber = xlPrinting.LineWrite_DKT(idaPRINT_SLIP_LINE);
+                    }
+
+                    if (pOutput_Type == "PREVIEW")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.PreView(1, vPageNumber);
+
+                    }
+                    else if (pOutput_Type == "PRINTER")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.Printing(1, vPageNumber);
+
+                    }
+                    else if (pOutput_Type == "PDF")
+                    {//[PRINT]
+                        ////xlPrinting.Printing(3, 4); //시작 페이지 번호, 종료 페이지 번호
+                        xlPrinting.PDF(pSaveFileName);
+
+                    }
+                    else if (pOutput_Type == "EXCEL")
+                    {
+                        ////[SAVE]
+                        xlPrinting.Save(pSaveFileName); //저장 파일명
+                    }
+
+                    vPageTotal = vPageTotal + vPageNumber;
+                }
+                //-------------------------------------------------------------------------------------
+
+                //-------------------------------------------------------------------------------------
+                xlPrinting.Dispose();
+                //-------------------------------------------------------------------------------------
+            }
+            catch (System.Exception ex)
+            {
+                string vMessage = ex.Message;
+                xlPrinting.Dispose();
+
+                System.Windows.Forms.Application.UseWaitCursor = false;
+                this.Cursor = System.Windows.Forms.Cursors.Default;
+                System.Windows.Forms.Application.DoEvents();
+                return;
+            }
+
+            //-------------------------------------------------------------------------
+            vMessageText = string.Format("Print End ^.^ [Tatal Page : {0}]", vPageTotal);
+            isAppInterfaceAdv1.AppInterface.OnAppMessageEvent(vMessageText);
+            System.Windows.Forms.Application.DoEvents();
+
+            System.Windows.Forms.Application.UseWaitCursor = false;
+            this.Cursor = System.Windows.Forms.Cursors.Default;
+            System.Windows.Forms.Application.DoEvents();
+        }
+
+        #endregion;
+
+        #region ----- Events -----
+
+        private void isAppInterfaceAdv1_AppMainButtonClick(ISAppButtonEvents e)
+        {
+            if (this.IsActive)
+            {
+                if (e.AppMainButtonType == ISUtil.Enum.AppMainButtonType.Search)
+                { 
+                }
+                else if (e.AppMainButtonType == ISUtil.Enum.AppMainButtonType.AddUnder)
+                {
+                     
+                }
+                else if (e.AppMainButtonType == ISUtil.Enum.AppMainButtonType.Update)
+                {
+                    
+                }
+                else if (e.AppMainButtonType == ISUtil.Enum.AppMainButtonType.Cancel)
+                {
+                     
+                }
+                else if (e.AppMainButtonType == ISUtil.Enum.AppMainButtonType.Delete)
+                {
+                     
+                }
+                else if (e.AppMainButtonType == ISUtil.Enum.AppMainButtonType.Print)
+                {
+                     
+                }
+                else if (e.AppMainButtonType == ISUtil.Enum.AppMainButtonType.Export)
+                {
+                     
+                }
+            }
+        }
+
+        #endregion;
+
+        #region ----- Form Event ----- 
+        
+        private void FCMF0211_Load(object sender, EventArgs e)
+        {             
+            // 회계장부 정보 설정.
+            GetAccountBook();
+        }
+
+        private void FCMF0211_Shown(object sender, EventArgs e)
+        {
+            RB_PRINTER.CheckedState = ISUtil.Enum.CheckedState.Checked;
+
+            Application.UseWaitCursor = false;
+            System.Windows.Forms.Cursor.Current = Cursors.Default;
+            Application.DoEvents();
+
+            BTN_OK.Enabled = true;
+            BTN_CLOSED.Enabled = true;
+            if (mPrintOptionFlag == "Y")
+            {
+                this.Width = 310;
+                this.Height = 220;
+
+                GB_PRINT_OPTION.Visible = true;
+                BTN_OK.Visible = true;
+                BTN_CLOSED.Visible = true;
+            }
+            else
+            { 
+                this.Width = 310;
+                this.Height = 105;
+
+                GB_PRINT_OPTION.Visible = false;
+                BTN_OK.Visible = false;
+                BTN_CLOSED.Visible = false;
+
+                XLPrinting_Main(iString.ISNull(V_PRINT_TYPE.EditValue));
+
+                this.DialogResult = DialogResult.OK;
+                this.Close();
+                return;
+            } 
+        }
+
+        private void RB_PRINT_CheckChanged(object sender, EventArgs e)
+        {
+            ISRadioButtonAdv vRadio = sender as ISRadioButtonAdv;
+            V_PRINT_TYPE.EditValue = vRadio.RadioCheckedString; 
+        }
+             
+        #endregion
+
+        private void BTN_OK_ButtonClick(object pSender, EventArgs pEventArgs)
+        {
+            if (iString.ISNull(V_PRINT_TYPE.EditValue) == string.Empty)
+            { 
+                MessageBoxAdv.Show(isMessageAdapter1.ReturnText("FCM_10327"), "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            BTN_OK.Enabled = false;
+            BTN_CLOSED.Enabled = false;
+
+            XLPrinting_Main(iString.ISNull(V_PRINT_TYPE.EditValue));
+
+            BTN_OK.Enabled = false;
+            BTN_CLOSED.Enabled = true;
+            this.DialogResult = DialogResult.OK;
+            this.Close();
+        }
+
+        private void BTN_CLOSED_ButtonClick(object pSender, EventArgs pEventArgs)
+        {
+            this.DialogResult = DialogResult.Cancel;
+            this.Close();
+        }
+
+        #region ----- Lookup Event ----- 
+         
+        #endregion       
+
+        #region ----- Adapter Event -----
+         
+        #endregion
+
+    }
+}
