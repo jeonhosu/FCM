@@ -1351,7 +1351,7 @@ namespace FCMF0220
             SLIP_QUERY_STATUS.EditValue = "NON-QUERY";
             if (mAuto_Search_Flag == "N")
             {
-                SLIP_DATE_FR_0.EditValue = iDate.ISDate_Add(iDate.ISGetDate(), -20);
+                SLIP_DATE_FR_0.EditValue = iDate.ISMonth_1st(iDate.ISDate_Month_Add(iDate.ISGetDate(), -2));
                 SLIP_DATE_TO_0.EditValue = iDate.ISGetDate();
             }
 

@@ -110,13 +110,13 @@ namespace FX_Main
             vSplit[9] = "80";   //SOB_ID
             vSplit[10] = "801"; //ORG_ID
 
-            //vSplit[0] = "146.56.184.66";                   //Oracle_Host
-            //vSplit[1] = "1521";                           //Oracle_Port
-            //vSplit[2] = "KJK_icn1rm.sub12300429060.kjkvcn.oraclevcn.com";                          //Oracle_ServiceName
-            //vSplit[3] = "APPS";                           //Oracle_UserId
-            //vSplit[4] = "infoflex";                       //Oracle_Password   
-            //vSplit[9] = "80";   //SOB_ID
-            //vSplit[10] = "801"; //ORG_ID
+            vSplit[0] = "146.56.184.66";                   //Oracle_Host
+            vSplit[1] = "1521";                           //Oracle_Port
+            vSplit[2] = "KJK_icn1rm.sub12300429060.kjkvcn.oraclevcn.com";                          //Oracle_ServiceName
+            vSplit[3] = "APPS";                           //Oracle_UserId
+            vSplit[4] = "infoflex";                       //Oracle_Password   
+            vSplit[9] = "80";   //SOB_ID
+            vSplit[10] = "801"; //ORG_ID
 
             //vSplit[0] = "106.251.238.99";                   //Oracle_Host
             //vSplit[1] = "1521";                           //Oracle_Port
